@@ -52,19 +52,16 @@ def train(model_cfg:_Config, args, model_name, experiment_name="",log_dir="./log
                                max_num_groups=model_cfg.max_num_groups,max_seq_len=model_cfg.max_seq_len,
                                data_dict=data_dict, args=args, mode="train",use_agents=model_cfg.use_agents,
                                add_scene_svg=model_cfg.add_scene_svg,add_history_agent_svg=model_cfg.add_history_agent_svg,max_num_agents=model_cfg.max_num_agents)
-    x = train_dataset[0]
-    x = train_dataset[2]
-    x = train_dataset[3]
+
     val_dataset = SVGDataset(model_args=model_cfg.model_args,
                              max_num_groups=model_cfg.max_num_groups,max_seq_len=model_cfg.max_seq_len,
                              data_dict=data_dict, args=args, mode="val",use_agents=model_cfg.use_agents,
                              add_scene_svg=model_cfg.add_scene_svg,add_history_agent_svg=model_cfg.add_history_agent_svg,max_num_agents=model_cfg.max_num_agents)
     criterion= get_ade
     old_loss_criterion= nn.MSELoss()
-    if args.modes > -1:
+    if args.modes > 1:
         criterion= Loss()
         old_loss_criterion= get_ade_6
-    ###LSTM,MLP,MLP_Before_Residual,Encoder_One_MLP,Encoder_One_Transformer
 
     model = MLPTransformer(model_config=model_cfg,data_config= None,
                            modes=args.modes,history_num = 20,future_len=30,
@@ -83,7 +80,6 @@ def train(model_cfg:_Config, args, model_name, experiment_name="",log_dir="./log
     stats = Stats(num_steps=model_cfg.num_steps, num_epochs=model_cfg.num_epochs, steps_per_epoch=len(train_dataloader),
                   stats_to_print=model_cfg.stats_to_print)
     stats.stats['val'] = defaultdict(SmoothedValue)
-    train_vars = TrainVars()
     timer = Timer()
 
     stats.num_parameters = utils.count_parameters(model)
@@ -136,7 +132,7 @@ def train(model_cfg:_Config, args, model_name, experiment_name="",log_dir="./log
                 output,conf = model(entery)
                 loss_dict = {}
                 #                 print(data['target_positions'].shape,output.shape,conf.shape)
-                if args.modes == -1:
+                if args.modes == 1:
                     loss_dict['loss'] = criterion(data['target_positions'].to(device), output.reshape(data['target_positions'].shape),).mean()
                     loss_dict['min_ade'] = loss_dict['loss']
                     loss_dict['old_loss'] = old_loss_criterion(data['target_positions'].to(device),
@@ -220,7 +216,7 @@ def validation_train(val_dataloader,model,model_cfg,device, criterion, epoch,sta
 
             output,conf = model(entery)
             loss_dict = {}
-            if args.modes == -1:
+            if args.modes == 1:
                 loss_dict['loss'] = criterion(data['target_positions'].to(device),
                                               output.reshape(data['target_positions'].shape),).mean()
                 loss_dict['min_ade'] = loss_dict['loss']
@@ -340,10 +336,7 @@ if __name__ == "__main__":
     if args.train_idxs is not None:
         cfg.train_idxs = args.train_idxs
 
-    ### Normal=1, LSTM=2, MLP=3, MLP_Before_Residual=4, Encoder_One_MLP=5
-    ### Encoder_One_Transformer=6, Encoder_One_LSTM=7, Shared_mlp=8, added_agent_with_Encoder_One_MLP=9,
-    ### Conv=10, added_agent_with_Encoder_One_Conv=11,added_agent_with_Encoder_One_MLP_albert=12,
-    ### raster_model = 100
+
 
     ####best model
     train(model_cfg=cfg, args=args,
